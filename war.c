@@ -1,44 +1,113 @@
-// Inclusão das bibliotecas exigidas pelo Nível Novato:
 #include <stdio.h>
+#include <stdlib.h> // Necessário para calloc, malloc e free.
 #include <string.h>
+#include <time.h>   // Necessário para srand e rand (dados do ataque).
 
-// 1. Criação da Struct:
+// 1. (Nossa Struct).
 typedef struct {
-    char nome[5]; // Espaço para nomes com até 29 letras.
-    char cor[6];  // Espaço para cores com até 9 letras.
-    int tropas;    // Número de tropas.
+    char nome[8];
+    char cor[9];
+    int tropas;
 } Territorio;
 
-int main() {
-    // 2. Declaração do vetor de structs para 5 territórios:
-    Territorio mapa[7];
+// --- MÓDULOS ---
+
+// Módulo para exibir o estado atual do mapa:
+void exibirMapa(Territorio* mapa, int tamanho) {
+    printf("\n=== MAPA ATUALIZADO ===\n");
+    for (int i = 0; i < tamanho; i++) {
+        printf("[%d] %s | Cor: %s | Tropas: %d\n", i, mapa[i].nome, mapa[i].cor, mapa[i].tropas);
+    }
+    printf("=======================\n");
+}
+
+// 2. Função de Ataque usando Ponteiros.
+void atacar(Territorio* atacante, Territorio* defensor) {
+    // Validação: Não pode atacar um território aliado.
+    if (strcmp(atacante->cor, defensor->cor) == 0) {
+        printf("\n=> Movimento Invalido: Voce nao pode atacar seu proprio territorio!\n");
+        return;
+    }
+
+    // Simulando dados de 1 a 6:
+    int dado_ataque = (rand() % 6) + 1;
+    int dado_defesa = (rand() % 6) + 1;
     
-    printf("--- BEM-VINDO AO CADASTRO DO WAR ---\n");
-    printf("solicitando os dados de 5 territorios.\n\n");
+    printf("\n--- BATALHA: %s vs %s ---\n", atacante->nome, defensor->nome);
+    printf("Ataque rolou: %d | Defesa rolou: %d\n", dado_ataque, dado_defesa);
 
-    // 3. Entrada dos dados: Laço for para cadastrar os 5 territórios:
-    for(int i = 0; i < 5; i++) {
-        printf("--- Territorio %d ---\n", i + 1);
+    // Regras de vitória e derrota:
+    if (dado_ataque > dado_defesa) {
+        printf("RESULTADO: O atacante VENCEU a batalha!\n");
         
-        // Mensagens claras orientando o usuário:
-        printf("Digite o nome do territorio: ");
-        // Usando scanf("%s", ...) conforme sugerido pela matéria para strings simples.
-        scanf("%s", mapa[i].nome); 
+        // Transfere a cor (muda de dono).
+        strcpy(defensor->cor, atacante->cor);
         
-        printf("Digite a cor do exercito (ex: Vermelho, Azul): ");
+        // Transfere metade das tropas do atacante para o novo território.
+        int tropas_transferidas = atacante->tropas / 2;
+        defensor->tropas = tropas_transferidas;
+        atacante->tropas -= tropas_transferidas;
+        
+    } else {
+        printf("RESULTADO: O ataque FALHOU!\n");
+        // Atacante perde uma tropa.
+        atacante->tropas -= 1;
+    }
+}
+
+// 4. (Liberar Memória).
+void liberarMemoria(Territorio* mapa) {
+    free(mapa); // Devolve a memória alocada dinamicamente.
+}
+
+// --- ARENA PRINCIPAL ---
+int main() {
+    // Garante que os dados sejam aleatórios a cada partida usando o tempo atual do PC.
+    srand(time(NULL));
+
+    int qtd_territorios;
+    printf("--- WAR: NIVEL AVENTUREIRO ---\n");
+    printf("Quantos territorios o mapa tera? ");
+    scanf("%d", &qtd_territorios);
+
+    // 1. Alocação Dinâmica com calloc.
+    // Cria o mapa do tamanho exato que o usuário pediu e zera os valores.
+    Territorio* mapa = (Territorio*) calloc(qtd_territorios, sizeof(Territorio));
+
+    // Laço para preencher os territórios:
+    for(int i = 0; i < qtd_territorios; i++) {
+        printf("\n--- Cadastrando Territorio %d ---\n", i);
+        printf("Nome: ");
+        scanf("%s", mapa[i].nome);
+        printf("Cor (ex: Vermelho, Azul): ");
         scanf("%s", mapa[i].cor);
-        
-        printf("Digite a quantidade inicial de tropas: ");
+        printf("Tropas: ");
         scanf("%d", &mapa[i].tropas);
-        printf("\n");
     }
 
-    // 4. Exibição dos dados: Percorrendo o vetor para mostrar tudo formatado.
-    printf("--- RELATORIO FINAL DOS TERRITORIOS ---\n");
-    for(int i = 0; i < 5; i++) {
-        // Exibe os dados com tempo de resposta imediato, cumprindo o requisito de desempenho.
-        printf("Territorio: %s | Cor: %s | Tropas: %d\n", mapa[i].nome, mapa[i].cor, mapa[i].tropas);
+    exibirMapa(mapa, qtd_territorios);
+
+    // Interface amigável para o usuário escolher o ataque:
+    if (qtd_territorios >= 2) {
+        int id_ataque, id_defesa;
+        printf("\nChegou a hora do ataque!\n");
+        printf("Digite o numero (ID) do territorio ATACANTE: ");
+        scanf("%d", &id_ataque);
+        printf("Digite o numero (ID) do territorio DEFENSOR: ");
+        scanf("%d", &id_defesa);
+
+        // Chamamos a função atacar passando os ENDEREÇOS (&) dos territórios escolhidos.
+        atacar(&mapa[id_ataque], &mapa[id_defesa]);
+        
+        // Exibimos o mapa para ver as mudanças causadas pelos ponteiros:
+        exibirMapa(mapa, qtd_territorios);
+    } else {
+        printf("\nSem territorios suficientes para uma batalha.\n");
     }
+
+    // Fim de jogo: libera a memória.
+    liberarMemoria(mapa);
+    printf("Memoria liberada. Fim de jogo!\n");
 
     return 0;
 }
